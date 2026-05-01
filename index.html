@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeCraftHub: Learning Management Platform</title>
+    <style>
+        :root {
+            --primary: #8B5CF6;
+            --success: #F59E0B;
+            --danger: #EF4444;
+            --dark: #1F2937;
+            --light: #F3F4F6;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); margin: 0; padding: 20px; color: var(--dark); }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; color: var(--primary); }
+        
+        /* Form Styling */
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 20px; font-weight: bold; transition: 0.3s; }
+        .btn-add { background: var(--primary); color: white; width: 100%; margin-top: 15px; }
+        .btn-add:hover { opacity: 0.9; }
+
+        /* Stats */
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-box { flex: 1; background: white; padding: 15px; border-radius: 8px; text-align: center; border-bottom: 4px solid var(--primary); }
+
+        /* Table Styling */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: var(--primary); color: white; }
+        .btn-edit { color: var(--success); background: none; }
+        .btn-delete { color: var(--danger); background: none; }
+        
+        .loading { text-align: center; display: none; padding: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>CodeCraftHub: Your Learning Management Platform</h1>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats" id="stats">
+        <div class="stat-box">Total Courses: <span id="total-count">0</span></div>
+    </div>
+
+    <!-- Add Course Form -->
+    <div class="card">
+        <h3>Add New Course</h3>
+        <form id="course-form">
+            <div class="form-grid">
+                <input type="text" id="name" placeholder="Course Name" required>
+                <input type="date" id="target_date" required>
+                <textarea id="description" placeholder="Course Description" style="grid-column: span 2;" required></textarea>
+                <select id="status" style="grid-column: span 2;">
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-add" id="submit-btn">Save Course</button>
+        </form>
+    </div>
+
+    <div id="loading" class="loading">Loading...</div>
+
+    <!-- Courses List -->
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Target Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="courses-body">
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:5000/api/courses';
+    const form = document.getElementById('course-form');
+    const coursesBody = document.getElementById('courses-body');
+    const loading = document.getElementById('loading');
+
+    async function fetchCourses() {
+        loading.style.display = 'block';
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            renderCourses(data.courses);
+            document.getElementById('total-count').innerText = data.count;
+        } catch (err) {
+            alert('Error connecting to server. Make sure the server is running on port 5000');
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    function renderCourses(courses) {
+        coursesBody.innerHTML = '';
+        courses.forEach(course => {
+            const row = `
+                <tr>
+                    <td>${course.name}</td>
+                    <td>${course.description}</td>
+                    <td>${course.target_date}</td>
+                    <td><span class="status-badge">${course.status}</span></td>
+                    <td>
+                        <button class="btn-delete" onclick="deleteCourse(${course.id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+            coursesBody.innerHTML += row;
+        });
+    }
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const newCourse = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('description').value,
+            target_date: document.getElementById('target_date').value,
+            status: document.getElementById('status').value
+        };
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCourse)
+            });
+            form.reset();
+            fetchCourses();
+        } catch (err) {
+            alert('Failed to add course');
+        }
+    };
+
+    async function deleteCourse(id) {
+        if (!confirm('Are you sure you want to delete?')) return;
+        try {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            fetchCourses();
+        } catch (err) {
+            alert('Failed to delete');
+        }
+    }
+
+    fetchCourses();
+</script>
+
+</body>
+</html>
